@@ -1,0 +1,2694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golf Forecast by ZIP Code</title>
+  <style>
+    :root {
+      --bg-top: #071923;
+      --bg-mid: #0b2d3b;
+      --bg-bottom: #031018;
+
+      --card: rgba(8, 31, 43, 0.92);
+      --card-soft: rgba(13, 45, 59, 0.9);
+      --card-deep: rgba(4, 19, 29, 0.94);
+
+      --border: rgba(126, 206, 229, 0.22);
+      --border-strong: rgba(126, 206, 229, 0.34);
+
+      --text: #f4fbff;
+      --muted: #a9bfca;
+      --soft: #d8eef6;
+
+      --water: #43c6e8;
+      --water-2: #69e4ff;
+      --green: #6ee7a8;
+      --yellow: #f4c95d;
+
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.34);
+      --radius: 22px;
+
+      --excellent: #2ead5b;
+      --good: #7ac943;
+      --fine: #d89c1d;
+      --poor: #f39c35;
+      --awful: #b23a48;
+
+      --uv-low: #39A96B;
+      --uv-moderate: #D89C1D;
+      --uv-high: #F39C35;
+      --uv-very-high: #E84B3C;
+      --uv-extreme: #7B3FB2;
+      --uv-na: #6f7f88;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 78% 14%, rgba(90, 196, 117, 0.13), transparent 34rem),
+        radial-gradient(circle at 18% 8%, rgba(67, 198, 232, 0.09), transparent 32rem),
+        linear-gradient(180deg, #071223 0%, #06101e 54%, #031018 100%);
+      padding: 22px;
+    }
+
+    .app {
+      width: min(1220px, 100%);
+      margin: 0 auto;
+    }
+
+    .forecast-content {
+      display: none;
+    }
+
+    .forecast-content.is-visible {
+      display: block;
+    }
+
+    .hero.is-compact {
+      min-height: auto;
+      padding-bottom: 0;
+      margin-bottom: 18px;
+    }
+
+    .hero.is-compact .hero-search {
+      margin-top: 22px;
+    }
+
+    .hero {
+      position: relative;
+      min-height: calc(100vh - 44px);
+      overflow: hidden;
+      padding: 8px 0 32px;
+      margin-bottom: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .hero::before {
+      content: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(330px, 434px);
+      align-items: start;
+      gap: clamp(28px, 8vw, 110px);
+      padding-top: 8px;
+    }
+
+    .hero-title-wrap {
+      min-width: 0;
+      padding-top: 0;
+    }
+
+    .title-kicker {
+      color: #9fc4ff;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.8rem;
+      line-height: 1.1;
+      font-weight: 950;
+      margin: 0 0 10px;
+    }
+
+    .title-line {
+      display: block;
+    }
+
+    .by-zip {
+      display: block;
+      color: #6fbf73;
+      font-size: clamp(3.45rem, 6.4vw, 4.45rem);
+      font-weight: 950;
+      letter-spacing: -0.075em;
+      line-height: 0.92;
+      white-space: nowrap;
+    }
+
+    .hero-search {
+      justify-self: stretch;
+      margin-top: 50px;
+      padding: 24px;
+      border-radius: 26px;
+      background: rgba(28, 35, 48, 0.82);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.035);
+    }
+
+    .hero-search-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .hero-search .status {
+      margin-top: 14px;
+      color: #c8d2df;
+      font-size: 0.98rem;
+      line-height: 1.35;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      margin-bottom: 14px;
+      border-radius: 999px;
+      background: rgba(110, 231, 168, 0.12);
+      border: 1px solid rgba(110, 231, 168, 0.25);
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(4.4rem, 8vw, 6.25rem);
+      line-height: 0.86;
+      letter-spacing: -0.08em;
+      color: #f7fbff;
+    }
+
+    .hero-subtitle {
+      margin: 22px 0 0;
+      max-width: 690px;
+      color: #c8d2df;
+      font-size: 1.14rem;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .card {
+      background:
+        linear-gradient(180deg, rgba(13, 47, 62, 0.93), rgba(6, 24, 36, 0.93));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(10px);
+    }
+
+    .search-card {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 9px;
+      color: #c8d2df;
+      font-size: 0.96rem;
+      letter-spacing: -0.02em;
+      font-weight: 900;
+    }
+
+    input {
+      width: 100%;
+      height: 54px;
+      padding: 0 17px;
+      color: var(--text);
+      font-size: 1.05rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.10);
+      outline: none;
+    }
+
+    input::placeholder {
+      color: rgba(220, 230, 240, 0.42);
+    }
+
+    input:focus {
+      border-color: #6fbf73;
+      box-shadow: 0 0 0 3px rgba(111, 191, 115, 0.17);
+    }
+
+    button {
+      height: 54px;
+      padding: 0 19px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #78d77d, #45ad58);
+      color: #04110a;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 12px 26px rgba(69, 173, 88, 0.22);
+      white-space: nowrap;
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+    }
+
+    .status {
+      grid-column: 1 / -1;
+      margin-top: -2px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .section-title-main {
+      min-width: 0;
+    }
+
+    .section-location {
+      color: var(--muted);
+      font-weight: 850;
+      font-size: 0.95rem;
+      margin-top: 3px;
+      line-height: 1.25;
+    }
+
+    .current-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .current-title-block h2 {
+      font-size: 1.17rem;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+    }
+
+    .current-location-inline {
+      display: block;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 850;
+      line-height: 1.25;
+      margin-top: 6px;
+    }
+
+    .current-time {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 850;
+      line-height: 1.1;
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+
+    .current-observation-grid {
+      display: grid;
+      grid-template-columns: minmax(205px, 0.9fr) minmax(250px, 1.25fr) minmax(132px, 156px);
+      gap: 20px;
+      align-items: center;
+    }
+
+    .current-temp-big {
+      font-size: clamp(5.15rem, 7.05vw, 6.15rem);
+      font-weight: 950;
+      line-height: 0.74;
+      letter-spacing: -0.04em;
+      color: #f7fbff;
+      white-space: nowrap;
+      align-self: center;
+      transform: translateY(-1px);
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+
+    .current-details-block {
+      display: grid;
+      grid-template-columns: auto minmax(95px, 1fr);
+      column-gap: 12px;
+      row-gap: 7px;
+      align-content: center;
+      justify-content: center;
+      justify-self: center;
+      min-height: 122px;
+      width: min(100%, 330px);
+      transform: translateX(32px);
+    }
+
+    .current-detail-label {
+      color: var(--soft);
+      font-size: 0.98rem;
+      font-weight: 950;
+      line-height: 1.35;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .current-detail-value {
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 750;
+      line-height: 1.35;
+      min-width: 0;
+    }
+
+    .current-detail-value.is-primary {
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .current-score-card {
+      justify-self: end;
+      width: 100%;
+      max-width: 142px;
+      min-height: 118px;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 7px;
+      padding: 13px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.065);
+      border: 1px solid rgba(126, 206, 229, 0.24);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.045);
+      text-align: center;
+    }
+
+    .current-score-card .score-pill {
+      min-width: 62px;
+      padding: 7px 12px;
+      font-size: 0.98rem;
+    }
+
+    .current-score-card .score-label {
+      font-size: 0.9rem;
+      font-weight: 950;
+    }
+
+    .current-score-caption {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 750;
+      line-height: 1.2;
+    }
+
+
+
+    h2 {
+      margin: 0;
+      font-size: 1.17rem;
+      letter-spacing: -0.025em;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.35;
+    }
+
+    .current-score-note {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }
+
+    .data-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.075);
+    }
+
+    .data-row:last-child {
+      border-bottom: 0;
+    }
+
+    .data-label {
+      color: var(--muted);
+    }
+
+    .data-value {
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .alerts-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .alert-item {
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(244, 201, 93, 0.12);
+      border: 1px solid rgba(244, 201, 93, 0.25);
+    }
+
+    .alert-title {
+      color: #ffe2a0;
+      font-weight: 950;
+      margin-bottom: 4px;
+    }
+
+    .sun-card {
+      background:
+        linear-gradient(135deg, rgba(9, 29, 43, 0.96), rgba(3, 13, 21, 0.98)),
+        radial-gradient(circle at top left, rgba(244, 201, 93, 0.18), transparent 21rem);
+    }
+
+    .sun-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .sun-subtitle {
+      color: var(--muted);
+      margin-top: 5px;
+      font-size: 0.94rem;
+    }
+
+    .sun-powered {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: right;
+      max-width: none;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+
+    .sun-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .sun-tile {
+      padding: 16px;
+      border-radius: 19px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.11);
+    }
+
+    .sun-label {
+      color: #ffe2a0;
+      font-size: 0.74rem;
+      font-weight: 950;
+      letter-spacing: 0.13em;
+    }
+
+    .sun-time {
+      margin-top: 6px;
+      font-size: clamp(1.45rem, 2.6vw, 2.15rem);
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: -0.055em;
+    }
+
+    .sun-desc {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .calendar-weekday {
+      text-align: center;
+      color: #8ebcf9;
+      font-size: 0.78rem;
+      font-weight: 950;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      padding-bottom: 2px;
+    }
+
+    .calendar-empty {
+      min-height: 138px;
+      border-radius: 20px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.03));
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .day-card {
+      min-height: 148px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 14px 15px;
+      border-radius: 20px;
+      color: #fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+    }
+
+    .day-score-wrap {
+      transform: translateY(-4px);
+    }
+
+    .day-card-top {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .day-date {
+      font-size: 0.76rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.92);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .day-month {
+      font-size: 1.02rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.98);
+      line-height: 1.1;
+    }
+
+    .day-score-big {
+      font-size: 3rem;
+      line-height: 0.92;
+      font-weight: 950;
+      letter-spacing: -0.08em;
+      color: rgba(255,255,255,0.98);
+    }
+
+    .day-label {
+      font-size: 0.94rem;
+      font-weight: 900;
+      color: rgba(255,255,255,0.96);
+      line-height: 1.1;
+    }
+
+    .day-best-time {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.22);
+      font-size: 0.78rem;
+      font-weight: 850;
+      color: rgba(255,255,255,0.92);
+      line-height: 1.15;
+    }
+
+    .day-best-time strong {
+      font-weight: 950;
+    }
+
+    .score-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: #fff;
+      font-weight: 950;
+      font-size: 0.88rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score-label {
+      color: var(--soft);
+      font-size: 0.82rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .lower-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .glance {
+      display: grid;
+      gap: 10px;
+    }
+
+    .glance-row {
+      padding: 13px;
+      border-radius: 17px;
+      background: rgba(255,255,255,0.065);
+      border: 1px solid rgba(255,255,255,0.095);
+    }
+
+    .glance-kicker {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 5px;
+    }
+
+    .glance-main {
+      font-weight: 950;
+      font-size: 1.02rem;
+    }
+
+    .legend {
+      display: grid;
+      gap: 9px;
+    }
+
+    .legend-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 13px;
+      border-radius: 14px;
+      color: #fff;
+      font-weight: 950;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.13);
+    }
+
+    .legend-row span:last-child {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(2, 12, 18, 0.22);
+    }
+
+    table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .daily-table col:nth-child(1) { width: 7%; }
+    .daily-table col:nth-child(2) { width: 8%; }
+    .daily-table col:nth-child(3) { width: 7%; }
+    .daily-table col:nth-child(4) { width: 10%; }
+    .daily-table col:nth-child(5) { width: 10%; }
+    .daily-table col:nth-child(6) { width: 10%; }
+    .daily-table col:nth-child(7) { width: 9%; }
+    .daily-table col:nth-child(8) { width: 8%; }
+    .daily-table col:nth-child(9) { width: 14%; }
+    .daily-table col:nth-child(10) { width: 17%; }
+
+    .hourly-table {
+      min-width: 900px;
+    }
+
+    .hourly-table col:nth-child(1) { width: 12%; }
+    .hourly-table col:nth-child(2) { width: 12%; }
+    .hourly-table col:nth-child(3) { width: 25%; }
+    .hourly-table col:nth-child(4) { width: 13%; }
+    .hourly-table col:nth-child(5) { width: 14%; }
+    .hourly-table col:nth-child(6) { width: 12%; }
+    .hourly-table col:nth-child(7) { width: 12%; }
+
+    th,
+    td {
+      padding: 12px 13px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.075);
+      vertical-align: middle;
+      font-size: 0.91rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hourly-table th,
+    .hourly-table td {
+      padding-left: 11px;
+      padding-right: 11px;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 950;
+      background: rgba(255,255,255,0.045);
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .muted,
+    .empty {
+      color: var(--muted);
+    }
+
+    .empty {
+      padding: 10px 0;
+    }
+
+    .wind-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(67, 198, 232, 0.13);
+      border: 1px solid rgba(67, 198, 232, 0.24);
+      color: var(--soft);
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .uv-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .uv-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 24px;
+      padding: 0 9px;
+      border-radius: 999px;
+      color: #fff;
+      font-weight: 950;
+      font-size: 0.82rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .uv-label {
+      color: var(--soft);
+      font-weight: 850;
+      font-size: 0.86rem;
+    }
+
+    .score-with-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .hourly-blocks {
+      display: grid;
+      gap: 18px;
+    }
+
+    .hourly-block {
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.10);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.03));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    .hourly-block-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 13px 18px;
+      background: rgba(255,255,255,0.09);
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .hourly-block-date {
+      color: #f6fbff;
+      font-size: 1.02rem;
+      font-weight: 950;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+    }
+
+    .hourly-block-summary {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 750;
+      line-height: 1.3;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .hourly-day-table {
+      width: 100%;
+      min-width: 1020px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .hourly-day-table col:nth-child(1) { width: 12%; }
+    .hourly-day-table col:nth-child(2) { width: 12%; }
+    .hourly-day-table col:nth-child(3) { width: 24%; }
+    .hourly-day-table col:nth-child(4) { width: 12%; }
+    .hourly-day-table col:nth-child(5) { width: 12%; }
+    .hourly-day-table col:nth-child(6) { width: 14%; }
+    .hourly-day-table col:nth-child(7) { width: 14%; }
+
+    .hourly-day-table th,
+    .hourly-day-table td {
+      padding: 12px 18px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.075);
+      vertical-align: middle;
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hourly-day-table th {
+      color: #8ebcf9;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 950;
+      background: rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+
+    .hourly-day-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .hourly-conditions {
+      color: var(--soft);
+      font-weight: 850;
+    }
+
+    @media (max-width: 1020px) {
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(120px, 1fr));
+        overflow-x: auto;
+      }
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero {
+        min-height: auto;
+        padding-bottom: 20px;
+      }
+
+      .hero-content,
+      .hero-search-row,
+      .grid-2,
+      .lower-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-search {
+        margin-top: 8px;
+      }
+
+      .current-header,
+      .current-observation-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .current-time,
+      .current-score-card {
+        justify-self: start;
+      }
+
+      .current-temp-big {
+        font-size: 5rem;
+        line-height: 0.78;
+        letter-spacing: -0.035em;
+      }
+
+      .hourly-block-header {
+        grid-template-columns: 1fr;
+      }
+
+      .hourly-block-summary {
+        text-align: left;
+        white-space: normal;
+      }
+
+      .current-details-block {
+        min-height: auto;
+        grid-template-columns: auto 1fr;
+        transform: none;
+      }
+
+      .current-detail-label {
+        text-align: left;
+      }
+
+      .by-zip {
+        font-size: clamp(2.8rem, 13vw, 4rem);
+        white-space: normal;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(120px, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .hero,
+      .card {
+        padding: 17px;
+      }
+
+      .sun-header,
+      .sun-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sun-powered {
+        text-align: left;
+        max-width: none;
+        white-space: normal;
+      }
+
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(120px, 1fr));
+      }
+    }
+  
+    /* Responsive polish */
+    @media (min-width: 1180px) {
+      .app {
+        width: min(1220px, calc(100% - 44px));
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .hero-content {
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+        gap: 34px;
+      }
+
+      h1 {
+        font-size: clamp(3.9rem, 7vw, 5.7rem);
+      }
+
+      .by-zip {
+        font-size: clamp(3rem, 5.6vw, 4rem);
+      }
+
+      .grid-2,
+      .lower-grid {
+        gap: 16px;
+      }
+
+      .current-observation-grid {
+        grid-template-columns: minmax(190px, 0.95fr) minmax(220px, 1.25fr) minmax(128px, 150px);
+        gap: 18px;
+      }
+
+      .current-details-block {
+        transform: translateX(8px);
+      }
+
+      .sun-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 920px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero {
+        min-height: auto;
+        padding-bottom: 18px;
+      }
+
+      .hero-content {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .hero-search {
+        margin-top: 4px;
+      }
+
+      .hero-search-row {
+        grid-template-columns: 1fr auto;
+      }
+
+      .forecast-content.is-visible {
+        display: block;
+      }
+
+      .grid-2,
+      .lower-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .current-observation-grid {
+        grid-template-columns: minmax(120px, 0.8fr) minmax(220px, 1fr) minmax(128px, 150px);
+      }
+
+      .current-temp-big {
+        font-size: clamp(4.6rem, 10vw, 5.8rem);
+      }
+
+      .current-details-block {
+        transform: none;
+      }
+
+      .sun-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(128px, 1fr));
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scroll-snap-type: x proximity;
+      }
+
+      .calendar-weekday,
+      .calendar-empty,
+      .day-card {
+        scroll-snap-align: start;
+      }
+
+      .day-card,
+      .calendar-empty {
+        min-height: 140px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .daily-table {
+        min-width: 1040px;
+      }
+
+      .hourly-day-table {
+        min-width: 980px;
+      }
+
+      .hourly-block-header {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .hourly-block-summary {
+        text-align: left;
+        white-space: normal;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 12px;
+      }
+
+      .hero {
+        padding-top: 2px;
+      }
+
+      h1 {
+        font-size: clamp(3.15rem, 15vw, 4.7rem);
+      }
+
+      .by-zip {
+        font-size: clamp(2.55rem, 13vw, 3.8rem);
+        white-space: normal;
+      }
+
+      .hero-subtitle {
+        margin-top: 16px;
+        font-size: 1rem;
+      }
+
+      .hero-search {
+        padding: 16px;
+        border-radius: 22px;
+      }
+
+      .hero-search-row {
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 20px;
+        margin-bottom: 14px;
+      }
+
+      .section-title {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .section-title .small-note {
+        text-align: left !important;
+        max-width: none !important;
+      }
+
+      .current-header {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      .current-time {
+        justify-self: start;
+      }
+
+      .current-observation-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .current-temp-big {
+        font-size: clamp(4.4rem, 20vw, 5.6rem);
+      }
+
+      .current-details-block {
+        width: 100%;
+        justify-self: stretch;
+        justify-content: start;
+        grid-template-columns: auto 1fr;
+        min-height: auto;
+      }
+
+      .current-detail-label {
+        text-align: left;
+      }
+
+      .current-score-card {
+        justify-self: stretch;
+        max-width: none;
+        min-height: auto;
+        grid-template-columns: auto auto 1fr;
+        justify-content: start;
+        justify-items: start;
+        text-align: left;
+        padding: 12px 14px;
+      }
+
+      .current-score-caption {
+        align-self: center;
+      }
+
+      .sun-header {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .sun-powered {
+        text-align: left;
+        white-space: normal;
+      }
+
+      .sun-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sun-time {
+        font-size: 1.75rem;
+      }
+
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(118px, 1fr));
+        gap: 9px;
+      }
+
+      .calendar-weekday {
+        font-size: 0.68rem;
+      }
+
+      .day-card,
+      .calendar-empty {
+        min-height: 132px;
+        border-radius: 17px;
+      }
+
+      .day-score-big {
+        font-size: 2.55rem;
+      }
+
+      .daily-table,
+      .hourly-day-table {
+        min-width: 920px;
+      }
+
+      th,
+      td,
+      .hourly-day-table th,
+      .hourly-day-table td {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .hourly-block {
+        border-radius: 20px;
+      }
+
+      .hourly-block-header {
+        padding: 12px 14px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .title-kicker {
+        font-size: 0.7rem;
+      }
+
+      h1 {
+        font-size: 3.05rem;
+      }
+
+      .by-zip {
+        font-size: 2.45rem;
+      }
+
+      .hero-subtitle,
+      .status {
+        font-size: 0.94rem;
+      }
+
+      input,
+      button {
+        height: 50px;
+      }
+
+      .current-temp-big {
+        font-size: 4.6rem;
+      }
+
+      .score-with-label {
+        gap: 6px;
+      }
+
+      .score-label {
+        font-size: 0.78rem;
+      }
+
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(108px, 1fr));
+      }
+
+      .day-card,
+      .calendar-empty {
+        min-height: 126px;
+        padding: 12px;
+      }
+
+      .day-score-big {
+        font-size: 2.35rem;
+      }
+
+      .day-best-time {
+        font-size: 0.72rem;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div class="hero-content">
+        <div class="hero-title-wrap">
+          <div class="title-kicker">National Weather Service Forecast</div>
+          <div class="title-line">
+            <h1>Golf Forecast</h1>
+            <div class="by-zip">by ZIP Code</div>
+          </div>
+          <p class="hero-subtitle">Enter a U.S. ZIP Code to pull the official NWS forecast, active alerts, golf-window hourly details, and a golf playability score.</p>
+        </div>
+
+        <div class="hero-search">
+          <div class="hero-search-row">
+            <div>
+              <label for="zipInput">ZIP Code</label>
+              <input id="zipInput" inputmode="numeric" maxlength="5" placeholder="19464" />
+            </div>
+            <button id="loadBtn">Get Golf Forecast</button>
+          </div>
+          <div id="status" class="status">NWS forecasts are point-based. The ZIP Code is first converted to latitude/longitude, then sent to api.weather.gov.</div>
+        </div>
+      </div>
+    </header>
+
+    <div id="forecastContent" class="forecast-content">
+    <section class="grid-2">
+      <div class="card">
+        <div class="current-header">
+          <div class="current-title-block">
+            <h2>Current Conditions</h2>
+            <span class="current-location-inline" id="obsLocation">--</span>
+          </div>
+          <div id="obsTime" class="current-time">--</div>
+        </div>
+        <div id="currentObservation" class="empty">No observation loaded yet.</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>Active Alerts</h2>
+          <span class="small-note">NWS alerts</span>
+        </div>
+        <div id="alerts" class="empty">No alerts loaded yet.</div>
+      </div>
+    </section>
+
+    <section class="card sun-card">
+      <div class="sun-header">
+        <div>
+          <h2>Sunrise &amp; Sunset</h2>
+          <div class="sun-subtitle" id="sunSubtitle">Today’s daylight times near --.</div>
+        </div>
+        <div class="sun-powered">Powered by Open-Meteo solar data.</div>
+      </div>
+
+      <div class="sun-grid">
+        <div class="sun-tile">
+          <div class="sun-label">SUNRISE</div>
+          <div class="sun-time" id="sunriseTime">--</div>
+          <div class="sun-desc">Morning daylight begins.</div>
+        </div>
+
+        <div class="sun-tile">
+          <div class="sun-label">SUNSET</div>
+          <div class="sun-time" id="sunsetTime">--</div>
+          <div class="sun-desc">Evening daylight ends.</div>
+        </div>
+
+        <div class="sun-tile">
+          <div class="sun-label">TOTAL DAYLIGHT</div>
+          <div class="sun-time" id="daylightTime">--</div>
+          <div class="sun-desc">Sunrise to sunset.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <div>
+          <h2>Golf Score Forecast</h2>
+          <div class="section-location" id="scoreForecastLocation">--</div>
+          <div class="small-note">Calendar first, daily details underneath. The calendar shows only the date, score, and score label.</div>
+        </div>
+      </div>
+
+      <div id="calendarGrid" class="calendar-grid"></div>
+
+      <div class="table-wrap">
+        <table class="daily-table">
+          <colgroup>
+            <col><col><col><col><col><col><col><col><col><col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Date</th>
+              <th>High</th>
+              <th>Precip</th>
+              <th>Wind</th>
+              <th>Best Time</th>
+              <th>Golf Score</th>
+              <th>Label</th>
+              <th>Forecast</th>
+              <th>Golf Note</th>
+            </tr>
+          </thead>
+          <tbody id="dailyTableBody">
+            <tr><td colspan="10" class="muted">No forecast loaded yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="lower-grid">
+      <div class="card">
+        <div class="section-title">
+          <h2>At a Glance</h2>
+          <span class="small-note">Best and weakest windows</span>
+        </div>
+        <div id="glance" class="glance">
+          <div class="empty">Load a ZIP Code to see the golf outlook.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>Score Legend</h2>
+          <span class="small-note">Higher end of range first</span>
+        </div>
+        <div class="legend">
+          <div class="legend-row" style="background: var(--excellent);"><span>Excellent</span><span>10.0–8.5</span></div>
+          <div class="legend-row" style="background: var(--good);"><span>Good</span><span>8.4–7.0</span></div>
+          <div class="legend-row" style="background: var(--fine);"><span>Fine</span><span>6.9–5.5</span></div>
+          <div class="legend-row" style="background: var(--poor);"><span>Poor</span><span>5.4–3.5</span></div>
+          <div class="legend-row" style="background: var(--awful);"><span>Awful</span><span>3.4–0.0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <div class="section-title-main">
+          <h2>Daytime Hourly Forecast</h2>
+          <div class="section-location" id="hourlyForecastLocation">--</div>
+          <div class="small-note">Golf-window hourly details with temperature, conditions, precipitation, wind, UV Index, and golf score. Hours are limited to daylight when sunrise/sunset data is available.</div>
+        </div>
+        <div class="small-note" style="max-width: 360px; text-align: right;">Daytime, afternoon, and evening hours only. Night hours and hours outside sunrise/sunset are hidden.</div>
+      </div>
+
+      <div id="hourlyBlocks" class="hourly-blocks">
+        <div class="empty">No hourly forecast loaded yet.</div>
+      </div>
+    </section>
+    </div>
+  </main>
+
+  <script>
+    const zipInput = document.getElementById("zipInput");
+    const loadBtn = document.getElementById("loadBtn");
+    const statusEl = document.getElementById("status");
+    const forecastContentEl = document.getElementById("forecastContent");
+    const heroEl = document.querySelector(".hero");
+
+    const obsLocationEl = document.getElementById("obsLocation");
+    const obsTimeEl = document.getElementById("obsTime");
+    const currentObservationEl = document.getElementById("currentObservation");
+    const alertsEl = document.getElementById("alerts");
+    const sunSubtitleEl = document.getElementById("sunSubtitle");
+    const scoreForecastLocationEl = document.getElementById("scoreForecastLocation");
+    const hourlyForecastLocationEl = document.getElementById("hourlyForecastLocation");
+    const sunriseTimeEl = document.getElementById("sunriseTime");
+    const sunsetTimeEl = document.getElementById("sunsetTime");
+    const daylightTimeEl = document.getElementById("daylightTime");
+    const calendarGridEl = document.getElementById("calendarGrid");
+    const glanceEl = document.getElementById("glance");
+    const dailyTableBodyEl = document.getElementById("dailyTableBody");
+    const hourlyBlocksEl = document.getElementById("hourlyBlocks");
+
+    const NWS_HEADERS = {
+      headers: {
+        "Accept": "application/geo+json"
+      }
+    };
+
+    let daylightMap = new Map();
+
+    loadBtn.addEventListener("click", () => {
+      loadGolfForecast(zipInput.value.trim());
+    });
+
+    zipInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        loadGolfForecast(zipInput.value.trim());
+      }
+    });
+
+    async function loadGolfForecast(zip) {
+      if (!/^\d{5}$/.test(zip)) {
+        setStatus("Please enter a valid 5-digit U.S. ZIP Code.", true);
+        return;
+      }
+
+      resetDisplay();
+      setStatus("Loading golf forecast...");
+
+      try {
+        const zipData = await fetchJson(`https://api.zippopotam.us/us/${zip}`);
+        const place = zipData.places?.[0];
+
+        if (!place) {
+          throw new Error("ZIP Code not found.");
+        }
+
+        const lat = Number(place.latitude);
+        const lon = Number(place.longitude);
+        const locationName = `${place["place name"]}, ${place["state abbreviation"]}`;
+
+        obsLocationEl.textContent = locationName;
+        scoreForecastLocationEl.textContent = locationName;
+        hourlyForecastLocationEl.textContent = locationName;
+        sunSubtitleEl.textContent = `Today’s daylight times near ${locationName}.`;
+
+        const points = await fetchJson(`https://api.weather.gov/points/${lat},${lon}`, NWS_HEADERS);
+        const props = points.properties;
+
+        const [
+          dailyResult,
+          hourlyResult,
+          alertsResult,
+          stationsResult,
+          openMeteoSolarResult,
+          openMeteoUvResult
+        ] = await Promise.allSettled([
+          fetchJson(props.forecast, NWS_HEADERS),
+          fetchJson(props.forecastHourly, NWS_HEADERS),
+          fetchJson(`https://api.weather.gov/alerts/active?point=${lat},${lon}`, NWS_HEADERS),
+          fetchJson(props.observationStations, NWS_HEADERS),
+          fetchJson(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=sunrise,sunset&timezone=auto`),
+          fetchJson(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=uv_index&timezone=auto`)
+        ]);
+
+        const solarData = openMeteoSolarResult.status === "fulfilled" ? openMeteoSolarResult.value : null;
+        renderSunTimes(solarData);
+        daylightMap = buildDaylightMap(solarData);
+
+        const uvMap = openMeteoUvResult.status === "fulfilled"
+          ? buildUvMap(openMeteoUvResult.value)
+          : new Map();
+
+        const hourlyPeriods = hourlyResult.status === "fulfilled"
+          ? hourlyResult.value.properties?.periods || []
+          : [];
+
+        const observation = await loadLatestObservation(stationsResult);
+        const currentGolfScore = getCurrentGolfScore(observation, hourlyPeriods);
+        renderObservation(observation, locationName, currentGolfScore);
+
+        const dailyPeriods = dailyResult.status === "fulfilled"
+          ? dailyResult.value.properties?.periods || []
+          : [];
+
+        const alerts = alertsResult.status === "fulfilled"
+          ? alertsResult.value.features || []
+          : [];
+
+        renderAlerts(alerts);
+
+        const dailySummaries = buildDailySummaries(dailyPeriods, hourlyPeriods, observation);
+        renderCalendar(dailySummaries);
+        renderDailyTable(dailySummaries);
+        renderGlance(dailySummaries);
+        renderHourlyTable(hourlyPeriods, uvMap);
+
+        forecastContentEl.classList.add("is-visible");
+        heroEl.classList.add("is-compact");
+        setStatus(`Golf forecast loaded for ${locationName}.`);
+      } catch (error) {
+        console.error(error);
+        forecastContentEl.classList.remove("is-visible");
+        heroEl.classList.remove("is-compact");
+        setStatus(error.message || "Something went wrong loading the forecast.", true);
+      }
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+
+      return response.json();
+    }
+
+    async function loadLatestObservation(stationsResult) {
+      if (stationsResult.status !== "fulfilled") return null;
+
+      const stationId = stationsResult.value.features?.[0]?.properties?.stationIdentifier;
+      if (!stationId) return null;
+
+      try {
+        return await fetchJson(`https://api.weather.gov/stations/${stationId}/observations/latest`, NWS_HEADERS);
+      } catch (error) {
+        console.warn("Latest observation unavailable", error);
+        return null;
+      }
+    }
+
+    function resetDisplay() {
+      forecastContentEl.classList.remove("is-visible");
+      heroEl.classList.remove("is-compact");
+      daylightMap = new Map();
+      obsLocationEl.textContent = "--";
+      obsTimeEl.textContent = "--";
+      scoreForecastLocationEl.textContent = "--";
+      hourlyForecastLocationEl.textContent = "--";
+      currentObservationEl.innerHTML = `<div class="empty">Loading observation...</div>`;
+      alertsEl.innerHTML = `<div class="empty">Loading alerts...</div>`;
+      sunriseTimeEl.textContent = "--";
+      sunsetTimeEl.textContent = "--";
+      daylightTimeEl.textContent = "--";
+      calendarGridEl.innerHTML = "";
+      glanceEl.innerHTML = `<div class="empty">Loading outlook...</div>`;
+      dailyTableBodyEl.innerHTML = `<tr><td colspan="10" class="muted">Loading daily forecast...</td></tr>`;
+      hourlyBlocksEl.innerHTML = `<div class="empty">Loading hourly forecast...</div>`;
+    }
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.style.color = isError ? "#ffb4b4" : "var(--muted)";
+    }
+
+    function getCurrentGolfScore(observation, hourlyPeriods) {
+      if (!observation?.properties) return null;
+
+      const p = observation.properties;
+      const tempF = cToF(p.temperature?.value);
+      const humidity = roundNumber(p.relativeHumidity?.value);
+      const windMph = msToMph(p.windSpeed?.value);
+
+      if (tempF == null) return null;
+
+      const now = Date.now();
+      const currentHourPeriod = hourlyPeriods.find(period => {
+        const start = new Date(period.startTime).getTime();
+        const end = new Date(period.endTime).getTime();
+        return now >= start && now < end;
+      }) || hourlyPeriods.find(period => new Date(period.startTime).getTime() >= now) || null;
+
+      const precipChance = currentHourPeriod?.probabilityOfPrecipitation?.value ?? 0;
+      const conditions = p.textDescription || currentHourPeriod?.shortForecast || "";
+
+      const score = calculateGolfScore({
+        temperature: Math.round(tempF),
+        precipitationChance: precipChance,
+        windMph,
+        humidity,
+        conditions
+      });
+
+      const scorePack = getGolfScoreDisplay(score);
+
+      return {
+        ...scorePack,
+        note: getGolfNote(scorePack.score, {
+          temperature: Math.round(tempF),
+          windMph,
+          precipitationChance: precipChance,
+          conditions
+        })
+      };
+    }
+
+    function renderObservation(observation, locationName, currentGolfScore) {
+      if (!observation?.properties) {
+        obsTimeEl.textContent = "--";
+        currentObservationEl.innerHTML = `<div class="empty">Current observation unavailable.</div>`;
+        return;
+      }
+
+      const p = observation.properties;
+      const tempF = cToF(p.temperature?.value);
+      const humidity = roundNumber(p.relativeHumidity?.value);
+      const windMph = msToMph(p.windSpeed?.value);
+      const text = p.textDescription || "--";
+      obsTimeEl.textContent = formatObservationTime(p.timestamp);
+
+      const windText = windMph == null ? "--" : `${formatWindDirection(p.windDirection?.value)} ${windMph} mph`;
+      const humidityText = humidity == null ? "--" : `${humidity}%`;
+
+      const scoreCard = currentGolfScore
+        ? `
+          <div class="current-score-card">
+            <span class="score-pill" style="background:${currentGolfScore.color};">${currentGolfScore.score.toFixed(1)}</span>
+            <div class="score-label">${escapeHtml(currentGolfScore.label)}</div>
+            <div class="current-score-caption">Golf score now</div>
+          </div>
+        `
+        : `
+          <div class="current-score-card">
+            <span class="score-pill" style="background:var(--uv-na);">--</span>
+            <div class="score-label">N/A</div>
+            <div class="current-score-caption">Golf score now</div>
+          </div>
+        `;
+
+      currentObservationEl.innerHTML = `
+        <div class="current-observation-grid">
+          <div class="current-temp-big">${formatTemp(tempF)}</div>
+          <div class="current-details-block">
+            <div class="current-detail-label">Conditions:</div>
+            <div class="current-detail-value is-primary">${escapeHtml(text)}</div>
+            <div class="current-detail-label">Wind:</div>
+            <div class="current-detail-value">${escapeHtml(windText)}</div>
+            <div class="current-detail-label">Humidity:</div>
+            <div class="current-detail-value">${escapeHtml(humidityText)}</div>
+          </div>
+          ${scoreCard}
+        </div>
+      `;
+    }
+
+    function renderAlerts(alerts) {
+      if (!alerts.length) {
+        alertsEl.innerHTML = `<div class="empty">No active alerts for this location.</div>`;
+        return;
+      }
+
+      alertsEl.innerHTML = `
+        <div class="alerts-list">
+          ${alerts.slice(0, 5).map(alert => {
+            const p = alert.properties || {};
+            return `
+              <div class="alert-item">
+                <div class="alert-title">${escapeHtml(p.event || "Weather Alert")}</div>
+                <div class="small-note">${escapeHtml(p.headline || p.description || "Alert details unavailable.")}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderSunTimes(data) {
+      const sunrise = data?.daily?.sunrise?.[0];
+      const sunset = data?.daily?.sunset?.[0];
+
+      sunriseTimeEl.textContent = sunrise ? formatOpenMeteoLocalTime(sunrise) : "--";
+      sunsetTimeEl.textContent = sunset ? formatOpenMeteoLocalTime(sunset) : "--";
+      daylightTimeEl.textContent = sunrise && sunset ? calculateDaylightDuration(sunrise, sunset) : "--";
+    }
+
+    function buildUvMap(data) {
+      const map = new Map();
+      const times = data?.hourly?.time || [];
+      const values = data?.hourly?.uv_index || [];
+
+      times.forEach((time, index) => {
+        // Open-Meteo timezone=auto timestamps are local wall-clock times.
+        // Do not convert them through Date() when building this key.
+        const key = String(time).slice(0, 13);
+        map.set(key, values[index]);
+      });
+
+      return map;
+    }
+
+    function buildDaylightMap(data) {
+      const map = new Map();
+      const dates = data?.daily?.time || [];
+      const sunrises = data?.daily?.sunrise || [];
+      const sunsets = data?.daily?.sunset || [];
+
+      dates.forEach((dateKey, index) => {
+        const sunriseMinutes = openMeteoLocalMinutes(sunrises[index]);
+        const sunsetMinutes = openMeteoLocalMinutes(sunsets[index]);
+
+        if (sunriseMinutes != null && sunsetMinutes != null && sunsetMinutes > sunriseMinutes) {
+          map.set(String(dateKey), {
+            sunriseMinutes,
+            sunsetMinutes
+          });
+        }
+      });
+
+      return map;
+    }
+
+    function getDaylightBoundsForDate(date) {
+      const key = toLocalDateKey(date);
+      const daylight = daylightMap.get(key);
+
+      if (!daylight) {
+        return {
+          startMinutes: 7 * 60,
+          endMinutes: 19 * 60
+        };
+      }
+
+      return {
+        startMinutes: Math.max(7 * 60, daylight.sunriseMinutes),
+        endMinutes: Math.min(19 * 60, daylight.sunsetMinutes)
+      };
+    }
+
+    function isPeriodInsidePlayableDaylight(period) {
+      const date = new Date(period.startTime);
+      const hourMinutes = date.getHours() * 60 + date.getMinutes();
+      const bounds = getDaylightBoundsForDate(date);
+
+      return hourMinutes >= bounds.startMinutes && hourMinutes <= bounds.endMinutes;
+    }
+
+    function buildDailySummaries(dailyPeriods, hourlyPeriods, observation) {
+      const dayPeriods = dailyPeriods.filter(period => period.isDaytime).slice(0, 7);
+
+      return dayPeriods.map(day => {
+        const date = new Date(day.startTime);
+        const dayKey = toLocalDateKey(date);
+        const dayHourly = hourlyPeriods.filter(period => {
+          const periodDate = new Date(period.startTime);
+          return toLocalDateKey(periodDate) === dayKey;
+        });
+
+        let high = day.temperature;
+
+        const observedTemp = cToF(observation?.properties?.temperature?.value);
+        const todayKey = toLocalDateKey(new Date());
+
+        if (dayKey === todayKey && observedTemp != null && observedTemp > high) {
+          high = Math.round(observedTemp);
+        }
+
+        const scoreInfo = calculateDailyGolfScore(dayHourly, date, day, high);
+        const scorePack = getGolfScoreDisplay(scoreInfo.score);
+
+        const displayWind = formatWindRange(scoreInfo.windowWindMin, scoreInfo.windowWindMax, day.windSpeed);
+
+        const displayPop = scoreInfo.windowPop != null
+          ? Math.round(scoreInfo.windowPop)
+          : day.probabilityOfPrecipitation?.value ?? 0;
+
+        const displayTemp = scoreInfo.windowTemp != null
+          ? Math.round(scoreInfo.windowTemp)
+          : high;
+
+        const displayHumidity = scoreInfo.windowHumidity != null
+          ? Math.round(scoreInfo.windowHumidity)
+          : null;
+
+        return {
+          dayName: formatDayName(date),
+          dateLabel: formatDateLabel(date),
+          date,
+          high,
+          windowTemp: displayTemp,
+          windowHumidity: displayHumidity,
+          precipitationChance: displayPop,
+          windText: displayWind,
+          shortForecast: day.shortForecast || "--",
+          score: scorePack.score,
+          bestWindow: scoreInfo.bestWindow,
+          bestWindowRange: scoreInfo.bestWindowRange,
+          bestWindowDisplay: scoreInfo.bestWindowDisplay,
+          label: scorePack.label,
+          color: scorePack.color,
+          note: getGolfNote(scorePack.score, {
+            temperature: displayTemp,
+            windMph: scoreInfo.windowWind ?? parseWindSpeed(day.windSpeed),
+            precipitationChance: displayPop,
+            conditions: day.shortForecast || ""
+          })
+        };
+      });
+    }
+
+    function calculateDailyGolfScore(dayHourlyPeriods, date, dailyPeriod, highTemp) {
+      const windows = getGolfWindows(date);
+      const daylightBounds = getDaylightBoundsForDate(date);
+
+      const scoredWindows = windows.map(window => {
+        const windowStartMinutes = Math.max(window.start * 60, daylightBounds.startMinutes);
+        const windowEndMinutes = Math.min(window.end * 60, daylightBounds.endMinutes);
+
+        if (windowEndMinutes < windowStartMinutes) return null;
+
+        const periods = dayHourlyPeriods.filter(period => {
+          const periodDate = new Date(period.startTime);
+          const minutes = periodDate.getHours() * 60 + periodDate.getMinutes();
+          return minutes >= windowStartMinutes && minutes <= windowEndMinutes;
+        });
+
+        if (!periods.length) return null;
+
+        const scoredHours = periods.map(period => {
+          const windMph = parseWindSpeed(period.windSpeed);
+          const pop = period.probabilityOfPrecipitation?.value ?? 0;
+          const humidity = period.relativeHumidity?.value ?? null;
+          const conditions = period.shortForecast || "";
+
+          const score = calculateGolfScore({
+            temperature: period.temperature,
+            precipitationChance: pop,
+            windMph,
+            humidity,
+            conditions
+          });
+
+          return {
+            score,
+            temperature: period.temperature,
+            windMph,
+            precipitationChance: pop,
+            humidity,
+            conditions
+          };
+        });
+
+        const avgScore = average(scoredHours.map(item => item.score));
+        const avgTemp = average(scoredHours.map(item => item.temperature));
+        const windValues = scoredHours.map(item => item.windMph).filter(isFiniteNumber);
+        const avgWind = average(windValues);
+        const minWind = windValues.length ? Math.min(...windValues) : null;
+        const maxWind = windValues.length ? Math.max(...windValues) : null;
+        const avgPop = average(scoredHours.map(item => item.precipitationChance));
+        const avgHumidity = average(scoredHours.map(item => item.humidity));
+
+        return {
+          ...window,
+          rangeLabel: formatWindowRangeLabel(windowStartMinutes, windowEndMinutes),
+          displayLabel: `Best: ${formatWindowRangeLabel(windowStartMinutes, windowEndMinutes)}`,
+          score: roundToTenth(avgScore),
+          avgTemp,
+          avgWind,
+          minWind,
+          maxWind,
+          avgPop,
+          avgHumidity,
+          periods,
+          scoredHours
+        };
+      }).filter(Boolean);
+
+      if (scoredWindows.length) {
+        scoredWindows.sort((a, b) => b.score - a.score);
+        const best = scoredWindows[0];
+
+        return {
+          score: best.score,
+          bestWindow: best.label,
+          bestWindowRange: best.rangeLabel,
+          bestWindowDisplay: best.displayLabel,
+          windowTemp: best.avgTemp,
+          windowWind: best.avgWind,
+          windowWindMin: best.minWind,
+          windowWindMax: best.maxWind,
+          windowPop: best.avgPop,
+          windowHumidity: best.avgHumidity
+        };
+      }
+
+      const fallbackScore = calculateGolfScore({
+        temperature: highTemp ?? dailyPeriod.temperature,
+        precipitationChance: dailyPeriod.probabilityOfPrecipitation?.value ?? 0,
+        windMph: parseWindSpeed(dailyPeriod.windSpeed),
+        humidity: null,
+        conditions: dailyPeriod.shortForecast || ""
+      });
+
+      return {
+        score: fallbackScore,
+        bestWindow: "Daytime",
+        bestWindowRange: "Daytime",
+        bestWindowDisplay: "Best: Daytime",
+        windowTemp: highTemp ?? dailyPeriod.temperature,
+        windowWind: parseWindSpeed(dailyPeriod.windSpeed),
+        windowWindMin: parseWindSpeed(dailyPeriod.windSpeed),
+        windowWindMax: parseWindSpeed(dailyPeriod.windSpeed),
+        windowPop: dailyPeriod.probabilityOfPrecipitation?.value ?? 0,
+        windowHumidity: null
+      };
+    }
+
+    function formatWindowRangeLabel(startMinutes, endMinutes) {
+      return `${formatMinutesAsTime(startMinutes)}–${formatMinutesAsTime(endMinutes)}`;
+    }
+
+    function formatMinutesAsTime(totalMinutes) {
+      const minutesInDay = Math.max(0, Math.min(24 * 60 - 1, Math.round(totalMinutes)));
+      let hours = Math.floor(minutesInDay / 60);
+      const minutes = minutesInDay % 60;
+      const suffix = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+
+      if (minutes === 0) {
+        return `${hours} ${suffix}`;
+      }
+
+      return `${hours}:${String(minutes).padStart(2, "0")} ${suffix}`;
+    }
+
+    function getGolfWindows(date) {
+      const day = date.getDay();
+      const isWeekend = day === 0 || day === 6;
+
+      if (isWeekend) {
+        return [
+          { label: "Morning", rangeLabel: "7–11 AM", displayLabel: "Best: 7–11 AM", start: 7, end: 11 },
+          { label: "Midday", rangeLabel: "11 AM–3 PM", displayLabel: "Best: 11 AM–3 PM", start: 11, end: 15 },
+          { label: "Late Day", rangeLabel: "3–7 PM", displayLabel: "Best: 3–7 PM", start: 15, end: 19 }
+        ];
+      }
+
+      return [
+        { label: "Morning", rangeLabel: "7–10 AM", displayLabel: "Best: 7–10 AM", start: 7, end: 10 },
+        { label: "After Work", rangeLabel: "4–8 PM", displayLabel: "Best: 4–8 PM", start: 16, end: 20 }
+      ];
+    }
+
+    function calculateGolfScore({ temperature, precipitationChance, windMph, humidity, conditions }) {
+      const tempScore = getGolfTempScore(temperature);
+      const precipScore = getGolfPrecipScore(precipitationChance, conditions);
+      const windScore = getGolfWindScore(windMph);
+      const humidityScore = getGolfHumidityScore(temperature, humidity);
+      const skyScore = getGolfSkyScore(temperature, conditions);
+
+      const rawTotal = tempScore + precipScore + windScore + humidityScore + skyScore;
+      const score = Math.max(0, Math.min(10, rawTotal / 10));
+
+      return roundToTenth(score);
+    }
+
+    function getGolfTempScore(temp) {
+      if (temp == null) return 20;
+
+      if (temp >= 65 && temp <= 75) return 35;
+
+      if (temp >= 60 && temp < 65) return 31;
+      if (temp > 75 && temp <= 80) return 30;
+
+      if (temp >= 55 && temp < 60) return 25;
+      if (temp > 80 && temp <= 85) return 23;
+
+      if (temp >= 50 && temp < 55) return 18;
+      if (temp > 85 && temp <= 90) return 15;
+
+      if (temp >= 45 && temp < 50) return 10;
+      if (temp > 90 && temp <= 95) return 8;
+
+      if (temp < 45) return 4;
+      if (temp > 95) return 2;
+
+      return 20;
+    }
+
+    function getGolfPrecipScore(pop, conditionsText = "") {
+      const text = String(conditionsText).toLowerCase();
+      const stormy = text.includes("thunder") || text.includes("storm");
+      const rain = text.includes("rain") || text.includes("showers") || text.includes("drizzle");
+
+      if (stormy && pop >= 50) return 2;
+      if (stormy && pop >= 30) return 6;
+      if (stormy) return 10;
+
+      if (pop == null) return 18;
+
+      if (pop < 15) return 25;
+      if (pop < 30) return rain ? 19 : 22;
+      if (pop < 50) return rain ? 14 : 17;
+      if (pop < 70) return 8;
+      return 3;
+    }
+
+    function getGolfWindScore(windMph) {
+      if (windMph == null) return 12;
+
+      if (windMph <= 5) return 20;
+      if (windMph <= 8) return 19;
+      if (windMph <= 12) return 16;
+      if (windMph <= 16) return 12;
+      if (windMph <= 20) return 8;
+      if (windMph <= 25) return 4;
+      return 1;
+    }
+
+    function getGolfHumidityScore(temp, humidity) {
+      if (humidity == null || temp == null) return 8;
+
+      if (temp < 75) {
+        if (humidity < 70) return 12;
+        if (humidity < 85) return 10;
+        return 8;
+      }
+
+      if (temp >= 75 && temp < 85) {
+        if (humidity < 55) return 12;
+        if (humidity < 70) return 9;
+        if (humidity < 85) return 6;
+        return 3;
+      }
+
+      if (temp >= 85) {
+        if (humidity < 50) return 8;
+        if (humidity < 65) return 5;
+        if (humidity < 80) return 3;
+        return 1;
+      }
+
+      return 8;
+    }
+
+    function getGolfSkyScore(temp, conditionsText = "") {
+      const text = String(conditionsText).toLowerCase();
+
+      const sunny = text.includes("sunny") || text.includes("clear");
+      const partly = text.includes("partly") || text.includes("mostly sunny");
+      const cloudy = text.includes("cloudy") || text.includes("overcast");
+
+      if (temp >= 85 && sunny) return 2;
+      if (temp >= 85 && partly) return 4;
+      if (temp >= 85 && cloudy) return 6;
+
+      if (temp >= 65 && temp <= 80) {
+        if (sunny || partly) return 8;
+        if (cloudy) return 6;
+      }
+
+      if (temp < 60 && cloudy) return 3;
+      if (temp < 60 && sunny) return 6;
+
+      return 5;
+    }
+
+    function getGolfScoreLabel(score) {
+      if (score >= 8.5) return { label: "Excellent", color: "var(--excellent)" };
+      if (score >= 7.0) return { label: "Good", color: "var(--good)" };
+      if (score >= 5.5) return { label: "Fine", color: "var(--fine)" };
+      if (score >= 3.5) return { label: "Poor", color: "var(--poor)" };
+      return { label: "Awful", color: "var(--awful)" };
+    }
+
+    function getGolfScoreDisplay(score) {
+      const cleanScore = roundToTenth(Math.max(0, Math.min(10, Number(score) || 0)));
+      const labelInfo = getGolfScoreLabel(cleanScore);
+
+      return {
+        score: cleanScore,
+        label: labelInfo.label,
+        color: labelInfo.color
+      };
+    }
+
+    function getGolfNote(score, { temperature, windMph, precipitationChance, conditions }) {
+      const text = String(conditions || "").toLowerCase();
+
+      if (text.includes("thunder") || text.includes("storm")) {
+        return "Thunderstorm risk could interrupt play.";
+      }
+
+      if (precipitationChance >= 60) {
+        return "Rain chances are high enough to make tee times risky.";
+      }
+
+      if (temperature >= 90 && windMph <= 8) {
+        return "Very hot with little breeze, tough walking conditions.";
+      }
+
+      if (temperature >= 85) {
+        return "Warm to hot conditions may make afternoon golf uncomfortable.";
+      }
+
+      if (windMph >= 20) {
+        return "Strong winds could make club selection and ball control difficult.";
+      }
+
+      if (windMph >= 14) {
+        return "Noticeable wind may affect play.";
+      }
+
+      if (temperature >= 65 && temperature <= 75 && windMph <= 10 && precipitationChance < 25) {
+        return "Excellent golf weather with comfortable temperatures and manageable wind.";
+      }
+
+      if (temperature < 55) {
+        return "Cool conditions may feel chilly, especially with wind.";
+      }
+
+      if (score >= 8.5) {
+        return "Great golf setup with favorable comfort and low weather disruption.";
+      }
+
+      if (score >= 7) {
+        return "Good playable weather, though not completely perfect.";
+      }
+
+      return "Playable at times, but weather may limit comfort or consistency.";
+    }
+
+    function renderCalendar(days) {
+      if (!days.length) {
+        calendarGridEl.innerHTML = `<div class="empty">Daily forecast unavailable.</div>`;
+        return;
+      }
+
+      const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const firstDayIndex = days[0].date.getDay();
+      const cells = [];
+
+      weekdayNames.forEach(name => {
+        cells.push(`<div class="calendar-weekday">${escapeHtml(name)}</div>`);
+      });
+
+      for (let i = 0; i < firstDayIndex; i += 1) {
+        cells.push(`<div class="calendar-empty" aria-hidden="true"></div>`);
+      }
+
+      days.forEach(day => {
+        const dateNumber = day.date.getDate();
+        const monthShort = day.date.toLocaleDateString(undefined, { month: "short" });
+
+        cells.push(`
+          <div class="day-card" style="background:${day.color};">
+            <div class="day-card-top">
+              <div class="day-month">${escapeHtml(monthShort)} ${dateNumber}</div>
+            </div>
+
+            <div class="day-score-wrap">
+              <div class="day-score-big">${day.score.toFixed(1)}</div>
+              <div class="day-label">${escapeHtml(day.label)}</div>
+              <div class="day-best-time"><strong>Best:</strong> ${escapeHtml(day.bestWindowRange || "Daytime")}</div>
+            </div>
+          </div>
+        `);
+      });
+
+      const totalCardCells = firstDayIndex + days.length;
+      const trailingBlanks = (7 - (totalCardCells % 7)) % 7;
+
+      for (let i = 0; i < trailingBlanks; i += 1) {
+        cells.push(`<div class="calendar-empty" aria-hidden="true"></div>`);
+      }
+
+      calendarGridEl.innerHTML = cells.join("");
+    }
+
+    function renderDailyTable(days) {
+      if (!days.length) {
+        dailyTableBodyEl.innerHTML = `<tr><td colspan="10" class="muted">Daily forecast unavailable.</td></tr>`;
+        return;
+      }
+
+      dailyTableBodyEl.innerHTML = days.map(day => `
+        <tr>
+          <td class="nowrap">${escapeHtml(day.dayName)}</td>
+          <td class="nowrap">${escapeHtml(day.dateLabel)}</td>
+          <td class="nowrap">${formatTemp(day.high)}</td>
+          <td class="nowrap">${formatPercent(day.precipitationChance)}</td>
+          <td class="nowrap">${escapeHtml(day.windText)}</td>
+          <td class="nowrap">${escapeHtml(day.bestWindowRange || "Daytime")}</td>
+          <td class="nowrap"><span class="score-pill" style="background:${day.color};">${day.score.toFixed(1)}</span></td>
+          <td class="nowrap">${escapeHtml(day.label)}</td>
+          <td>${escapeHtml(day.shortForecast)}</td>
+          <td>${escapeHtml(day.note)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderGlance(days) {
+      if (!days.length) {
+        glanceEl.innerHTML = `<div class="empty">Golf outlook unavailable.</div>`;
+        return;
+      }
+
+      const sorted = [...days].sort((a, b) => b.score - a.score);
+      const best = sorted[0];
+      const worst = sorted[sorted.length - 1];
+      const bestOptions = sorted
+        .filter(day => day.score >= 7)
+        .slice(0, 4)
+        .map(day => `${day.dayName} ${day.bestWindowRange || day.bestWindow}`);
+
+      glanceEl.innerHTML = `
+        <div class="glance-row">
+          <div class="glance-kicker">Best Golf Day</div>
+          <div class="glance-main">${escapeHtml(best.dayName)} ${escapeHtml(best.dateLabel)} · ${best.score.toFixed(1)} ${escapeHtml(best.label)}</div>
+          <div class="small-note">${escapeHtml(best.bestWindowDisplay || "Best: Daytime")} looks best. ${escapeHtml(best.note)}</div>
+        </div>
+
+        <div class="glance-row">
+          <div class="glance-kicker">Weakest Golf Day</div>
+          <div class="glance-main">${escapeHtml(worst.dayName)} ${escapeHtml(worst.dateLabel)} · ${worst.score.toFixed(1)} ${escapeHtml(worst.label)}</div>
+          <div class="small-note">${escapeHtml(worst.note)}</div>
+        </div>
+
+        <div class="glance-row">
+          <div class="glance-kicker">Best Time Options</div>
+          <div class="glance-main">${bestOptions.length ? escapeHtml(bestOptions.join(", ")) : "No standout windows"}</div>
+          <div class="small-note">The Golf Score favors 65–75°F, dry weather, lighter winds, and lower heat stress.</div>
+        </div>
+      `;
+    }
+
+    function renderHourlyTable(hourlyPeriods, uvMap) {
+      const rows = hourlyPeriods
+        .filter(period => isPeriodInsidePlayableDaylight(period))
+        .slice(0, 84);
+
+      if (!rows.length) {
+        hourlyBlocksEl.innerHTML = `<div class="empty">Hourly forecast unavailable.</div>`;
+        return;
+      }
+
+      const grouped = new Map();
+
+      rows.forEach(period => {
+        const periodDate = new Date(period.startTime);
+        const dayKey = toLocalDateKey(periodDate);
+
+        if (!grouped.has(dayKey)) {
+          grouped.set(dayKey, []);
+        }
+
+        grouped.get(dayKey).push(period);
+      });
+
+      const blocks = [];
+
+      grouped.forEach((periods, dayKey) => {
+        const date = new Date(periods[0].startTime);
+        const summary = buildHourlyDaySummary(periods);
+
+        const rowsHtml = periods.map(period => {
+          const periodDate = new Date(period.startTime);
+          const uvKey = makeOpenMeteoMatchKey(periodDate);
+          const uvValue = uvMap.get(uvKey);
+
+          const windMph = parseWindSpeed(period.windSpeed);
+          const score = calculateGolfScore({
+            temperature: period.temperature,
+            precipitationChance: period.probabilityOfPrecipitation?.value ?? 0,
+            windMph,
+            humidity: period.relativeHumidity?.value ?? null,
+            conditions: period.shortForecast || ""
+          });
+
+          const scorePack = getGolfScoreDisplay(score);
+          const uvInfo = getUvInfo(uvValue);
+
+          return `
+            <tr>
+              <td class="nowrap">${formatHourlyTimeOnly(periodDate)}</td>
+              <td class="nowrap">${formatTemp(period.temperature)}</td>
+              <td class="hourly-conditions">${escapeHtml(period.shortForecast || "--")}</td>
+              <td class="nowrap">${formatPercent(period.probabilityOfPrecipitation?.value ?? 0)}</td>
+              <td class="nowrap"><span class="wind-pill">${escapeHtml(period.windSpeed || "--")}</span></td>
+              <td class="nowrap">
+                <span class="uv-wrap">
+                  <span class="uv-pill" style="background:${uvInfo.color};">${escapeHtml(uvInfo.value)}</span>
+                  <span class="uv-label">${escapeHtml(uvInfo.label)}</span>
+                </span>
+              </td>
+              <td class="nowrap">
+                <span class="score-with-label">
+                  <span class="score-pill" style="background:${scorePack.color};">${scorePack.score.toFixed(1)}</span>
+                  <span class="score-label">${escapeHtml(scorePack.label)}</span>
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        blocks.push(`
+          <div class="hourly-block">
+            <div class="hourly-block-header">
+              <div class="hourly-block-date">${escapeHtml(formatHourlyDayHeader(date))}</div>
+              <div class="hourly-block-summary">${escapeHtml(summary)}</div>
+            </div>
+            <div class="table-wrap">
+              <table class="hourly-day-table">
+                <colgroup>
+                  <col><col><col><col><col><col><col>
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Temp</th>
+                    <th>Conditions</th>
+                    <th>Precip</th>
+                    <th>Wind</th>
+                    <th>UV Index</th>
+                    <th>Golf Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `);
+      });
+
+      hourlyBlocksEl.innerHTML = blocks.join("");
+    }
+
+    function buildHourlyDaySummary(periods) {
+      if (!periods.length) return "--";
+
+      const firstCondition = periods[0].shortForecast || "--";
+      const maxTemp = Math.max(...periods.map(period => Number(period.temperature) || -Infinity));
+      const maxPop = Math.max(...periods.map(period => Number(period.probabilityOfPrecipitation?.value ?? 0)));
+      const maxWind = Math.max(...periods.map(period => parseWindSpeed(period.windSpeed) ?? 0));
+
+      const parts = [
+        firstCondition,
+        Number.isFinite(maxTemp) ? `up to ${Math.round(maxTemp)}°` : null,
+        Number.isFinite(maxWind) ? `winds up to ${Math.round(maxWind)} mph` : null,
+        Number.isFinite(maxPop) ? `max ${Math.round(maxPop)}% precip` : null
+      ].filter(Boolean);
+
+      return parts.join(" · ");
+    }
+
+    function getUvInfo(value) {
+      if (value == null || Number.isNaN(Number(value))) {
+        return { value: "--", label: "N/A", color: "var(--uv-na)" };
+      }
+
+      const rounded = Math.round(Number(value));
+
+      if (rounded < 3) return { value: String(rounded), label: "Low", color: "var(--uv-low)" };
+      if (rounded < 6) return { value: String(rounded), label: "Moderate", color: "var(--uv-moderate)" };
+      if (rounded < 8) return { value: String(rounded), label: "High", color: "var(--uv-high)" };
+      if (rounded < 11) return { value: String(rounded), label: "Very High", color: "var(--uv-very-high)" };
+      return { value: String(rounded), label: "Extreme", color: "var(--uv-extreme)" };
+    }
+
+    function makeOpenMeteoMatchKey(date) {
+      const year = date.getFullYear();
+      const month = pad2(date.getMonth() + 1);
+      const day = pad2(date.getDate());
+      const hour = pad2(date.getHours());
+      return `${year}-${month}-${day}T${hour}`;
+    }
+
+    function calculateDaylightDuration(sunrise, sunset) {
+      const sunriseMinutes = openMeteoLocalMinutes(sunrise);
+      const sunsetMinutes = openMeteoLocalMinutes(sunset);
+
+      if (sunriseMinutes == null || sunsetMinutes == null || sunsetMinutes <= sunriseMinutes) {
+        return "--";
+      }
+
+      const diff = sunsetMinutes - sunriseMinutes;
+      const hours = Math.floor(diff / 60);
+      const minutes = diff % 60;
+
+      return `${hours}h ${minutes}m`;
+    }
+
+    function openMeteoLocalMinutes(value) {
+      const timePart = String(value).split("T")[1]?.slice(0, 5);
+
+      if (!timePart) return null;
+
+      const [hourString, minuteString] = timePart.split(":");
+      const hour = Number(hourString);
+      const minute = Number(minuteString);
+
+      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+
+      return hour * 60 + minute;
+    }
+
+    function formatOpenMeteoLocalTime(value) {
+      const timePart = String(value).split("T")[1]?.slice(0, 5);
+      if (!timePart) return "--";
+
+      const [hourString, minute] = timePart.split(":");
+      let hour = Number(hourString);
+      const suffix = hour >= 12 ? "PM" : "AM";
+      hour = hour % 12 || 12;
+
+      return `${hour}:${minute} ${suffix}`;
+    }
+
+    function formatObservationTime(timestamp) {
+      if (!timestamp) return "--";
+
+      const date = new Date(timestamp);
+
+      if (Number.isNaN(date.getTime())) return "--";
+
+      return date.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function formatWindDirection(degrees) {
+      if (degrees == null || Number.isNaN(Number(degrees))) return "";
+
+      const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      const index = Math.round(Number(degrees) / 45) % 8;
+
+      return directions[index];
+    }
+
+    function formatHourlyTime(date) {
+      return date.toLocaleString(undefined, {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function formatHourlyTimeOnly(date) {
+      return date.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function formatHourlyDayHeader(date) {
+      return date.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric"
+      });
+    }
+
+    function formatDayName(date) {
+      return date.toLocaleDateString(undefined, { weekday: "short" });
+    }
+
+    function formatDateLabel(date) {
+      return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+
+    function toLocalDateKey(date) {
+      return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function formatWindRange(minWind, maxWind, fallbackText = "--") {
+      if (minWind == null || maxWind == null) {
+        return fallbackText || "--";
+      }
+
+      const minRounded = Math.round(minWind);
+      const maxRounded = Math.round(maxWind);
+
+      if (minRounded === maxRounded) {
+        return `${minRounded} mph`;
+      }
+
+      return `${minRounded}–${maxRounded} mph`;
+    }
+
+    function parseWindSpeed(windSpeedText = "") {
+      const matches = String(windSpeedText).match(/\d+/g);
+      if (!matches || !matches.length) return null;
+      return Math.max(...matches.map(Number));
+    }
+
+    function cToF(value) {
+      if (value == null || Number.isNaN(Number(value))) return null;
+      return Number(value) * 9 / 5 + 32;
+    }
+
+    function msToMph(value) {
+      if (value == null || Number.isNaN(Number(value))) return null;
+      return Math.round(Number(value) * 2.23694);
+    }
+
+    function formatTemp(value) {
+      if (value == null || Number.isNaN(Number(value))) return "--";
+      return `${Math.round(Number(value))}°`;
+    }
+
+    function formatPercent(value) {
+      if (value == null || Number.isNaN(Number(value))) return "--";
+      return `${Math.round(Number(value))}%`;
+    }
+
+    function roundNumber(value) {
+      if (value == null || Number.isNaN(Number(value))) return null;
+      return Math.round(Number(value));
+    }
+
+    function roundToTenth(value) {
+      return Math.round(Number(value) * 10) / 10;
+    }
+
+    function average(values) {
+      const clean = values.filter(isFiniteNumber);
+      if (!clean.length) return null;
+      return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+    }
+
+    function isFiniteNumber(value) {
+      return typeof value === "number" && Number.isFinite(value);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
